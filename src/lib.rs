@@ -19,24 +19,37 @@ extern {
 }
 
 //Mein Code beginnt hier
-extern crate canvas_display;
-extern crate embedded_graphics;
 extern crate rand;
 
-use canvas_display::prelude::*;
-use embedded_graphics::{
-    pixelcolor::Rgb565,
-    prelude::*,
-    primitives::rectangle::Rectangle,
-    style::PrimitiveStyleBuilder
-};
+#[macro_use]
+extern crate lazy_static;
+
+use std::sync::Mutex;
 use rand::{ SeedableRng, Rng };
 use rand::rngs::StdRng;
 
+mod canvas;
 mod noise;
+
+use canvas::{ Canvas, Color };
 use noise::NoiseGen;
 
 const SEED: u64 = 120398471023;
+
+lazy_static! {
+    static ref NOISE_2D: Mutex<NoiseGen<(i32, i32)>> = {
+        Mutex::new(NoiseGen::new_from_seed(SEED))
+    };
+
+    static ref DISPLAY_2D: Mutex<Canvas> = {
+        let mut display_2d = Canvas::new(256, 256, "2d");
+        Mutex::new(display_2d)
+    };
+
+    static ref TIME: Mutex<f64> = {
+        Mutex::new(0.0)
+    };
+}
 
 #[wasm_bindgen(start)]
 pub fn main() {
@@ -45,33 +58,75 @@ pub fn main() {
     //Zufällige Verteilung von Werte
     create_h2("Random Distribution");
     let mut random = StdRng::seed_from_u64(SEED);
-    let mut display_rand = new_canvas("random");
+    let mut display_rand = Canvas::new(256, 256, "random");
+    display_rand.background(Color::new(120, 120, 120));
 
     for x in 0..256 {
         let y = (random.gen::<f32>() * 256.0) as i32;
 
-        Pixel(Point::new(x, y), Rgb565::BLACK).draw(&mut display_rand).unwrap();
+        display_rand.pixel(x, y, canvas::BLACK)
     }
+    display_rand.flush();
 
-    //1-Dimensionaler Perlinn Noise
+    //1-Dimensionaler Perlin Noise
     create_h2("1D Perlin Noise");
     let mut noise: NoiseGen<i32> = NoiseGen::new_from_seed(SEED);
-    let mut display_1d = new_canvas("1d");
+    let mut display_1d = Canvas::new(256, 256, "1d");
+    display_1d.background(Color::new(120, 120, 120));
 
     for x in 0..256 {
         let y = (noise.next((x as f64) / 128.0) * 256.0) as i32;
 
-        Pixel(Point::new(x, y), Rgb565::BLACK).draw(&mut display_1d).unwrap();
+        display_1d.pixel(x, y, canvas::BLACK)
     }
+    display_1d.flush();
+
+    //2-Dimensionaler Perlin Noise als Graph mit Animation
+    create_h2("2D Perlin Noise (Animated)");
+    lazy_static::initialize(&DISPLAY_2D);
+
+    //2-Dimensionaler Perlin Noise
+    create_h2("2D Perlin Noise (Stationary)");
+    let mut noise: NoiseGen<(i32, i32)> = NoiseGen::new_from_seed(SEED);
+    let mut display_2d = Canvas::new(256, 256, "2d_s");
+
+    for x in 0..256 {
+        for y in 0..256 {
+            let input = ((x as f64) / 256.0, (y as f64) / 256.0);
+            let c = (noise.next(input) * 256.0) as u8;
+
+            display_2d.pixel(x, y, Color::new(c, c, c));
+        }
+    }
+    display_2d.flush();
 }
 
-///Funktion, die einen neuen Canvas mit dem gegebenen id auf der Website erstellt
-fn new_canvas(id: &str) -> CanvasDisplay {
-    let mut display = CanvasDisplay::new(256, 256, id).unwrap();
-    let (r, g, b) = (120, 120, 120);
-    let bg_color = PrimitiveStyleBuilder::new().fill_color(Rgb565::new((r * 32 / 256) as u8, (g * 64 / 256) as u8, (b * 32 / 256) as u8)).build();
-    let background = Rectangle::new(Point::new(0, 0), Point::new(256, 256)).into_styled(bg_color);
-    background.draw(&mut display).unwrap();
+#[wasm_bindgen]
+pub fn animateCallback() {
+    let mut noise_2d = match NOISE_2D.lock() {
+        Ok(val) => val,
+        _ => return
+    };
+    let mut display_2d = match DISPLAY_2D.lock() {
+        Ok(val) => val,
+        _ => return
+    };
+    let mut t = match TIME.lock() {
+        Ok(val) => val,
+        _ => return
+    };
 
-    display
+    display_2d.background(Color::new(120, 120, 120));
+
+    for x in 0..256 {
+        let input = ((x as f64) / 128.0 + *t / 128.0, *t / 128.0);
+        let y = (noise_2d.next(input) * 256.0) as i32;
+
+        display_2d.pixel(x, y, canvas::BLACK)
+    }
+    display_2d.flush();
+
+    console_log(&format!("{}", t));
+
+    *t += 0.1;
 }
