@@ -1,23 +1,29 @@
 var canvasObjects = [];
 
-export function create_h2(str) {
-    let body = document.getElementsByTagName("body")[0];
-    let h1 = document.createElement("h2");
-    h1.innerHTML = str;
-    body.appendChild(h1);
-}
-
 export function console_log(str) {
     console.log(str);
 }
 
+export function set_style(id, style) {
+    document.getElementById(id).style = style;
+}
+
 export function new_canvas(str, width, height) {
+    let div = document.createElement("div");
+    div.id = str;
+
+    let h2 = document.createElement("h2");
+    h2.id = str + "_h2";
+    div.appendChild(h2);
+
     let canvas = document.createElement("canvas");
     canvas.width = width;
     canvas.height = height;
+    canvas.id = str + "_canvas";
     let context = canvas.getContext("2d");
 
-    document.getElementsByTagName("body")[0].appendChild(canvas);
+    div.appendChild(canvas);
+    document.getElementsByTagName("body")[0].appendChild(div);
 
     canvasObjects.push({
         name: str,
@@ -36,4 +42,8 @@ export function flush_canvas(str, data) {
             obj.context.putImageData(iData, 0, 0);
         }
     });
+}
+
+export function set_title(canvas_id, title) {
+    document.getElementById(canvas_id + "_h2").innerHTML = title;
 }

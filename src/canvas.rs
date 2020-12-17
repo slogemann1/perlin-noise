@@ -7,6 +7,12 @@ extern {
 
     #[wasm_bindgen]
     fn flush_canvas(s: &str, data: &[u8]);
+
+    #[wasm_bindgen]
+    fn set_title(id: &str, title: &str);
+
+    #[wasm_bindgen]
+    fn set_style(element_id: &str, style: &str);
 }
 
 pub const BLACK: Color = Color { r: 0, b: 0, g: 0, a: 255 };
@@ -48,7 +54,7 @@ impl Color {
 impl Canvas {
     pub fn new(width: u32, height: u32, name: &str) -> Canvas {
         let mut data: Vec<u8> = Vec::new();
-        for i in 0..(width * height * 4) {
+        for _ in 0..(width * height * 4) {
             data.push(0);
         }
 
@@ -85,5 +91,21 @@ impl Canvas {
 
     pub fn flush(&self) {
         flush_canvas(&self.name, self.data.as_slice());
+    }
+
+    pub fn set_title(&self, title: &str) {
+        set_title(&self.name, title);
+    }
+
+    pub fn set_pos(&self, x: u32, y: u32) {
+        set_style(&self.name, &format!("position: absolute; left: {}px; top: {}px;", x, y));
+    }
+
+    pub fn set_canvas_pos(&self, x: u32, y: u32) {
+        set_style(&format!("{}_canvas", self.name), &format!("position: relative; left: {}px; top: {}px;", x, y));
+    }
+
+    pub fn set_h2_pos(&self, x: u32, y: u32) {
+        set_style(&format!("{}_h2", self.name), &format!("position: relative; left: {}px; top: {}px;", x, y));
     }
 }
