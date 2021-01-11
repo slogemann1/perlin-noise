@@ -31,6 +31,9 @@ mod noise;
 use canvas::{ Canvas, Color };
 use noise::NoiseGen;
 
+const ORIGINAL_SEED: u64 = 120398471023;
+
+//Hier werden die Beispiele initializiert
 lazy_static! {
     static ref NOISE_2D: Mutex<NoiseGen<(i32, i32)>> = {
         Mutex::new(NoiseGen::new_from_seed(get_seed()))
@@ -49,6 +52,14 @@ lazy_static! {
         canvas.set_title("1D Perlin Noise");
         canvas.set_pos(400, 75);
         canvas.set_h2_pos(50, 0);
+        Mutex::new(canvas)
+    };
+
+    static ref DISPLAY_T_WERT: Mutex<Canvas> = {
+        let canvas = Canvas::new(256, 256, "1d_t");
+        canvas.set_title("Tangentenwerte t1 und t2 im Interval [1, 2]");
+        canvas.set_pos(595, 450);
+        canvas.set_h2_pos(-85, 0);
         Mutex::new(canvas)
     };
 
@@ -87,55 +98,17 @@ lazy_static! {
 pub fn main() {
     utils::set_panic_hook();
 
-    //Zufällige Verteilung von Werte
-    draw_zufaellig();
-
-    //1-Dimensionaler Perlin Noise
-    draw_1d();
-
-    //2-Dimensionaler Perlin Noise als Graph mit Animation (Siehe animate_callback())
-
-    //2-Dimensionaler Perlin Noise als Bild
-    draw_2d_bild();
-
-    //2-Dimensionaler Perlin Noise mit gliechem Anfang und ende
-    draw_2d_kreis();
-}
-
-#[wasm_bindgen]
-pub fn animate_callback() {
-    /*let mut noise_2d = match NOISE_2D.lock() {
-        Ok(val) => val,
-        _ => return
-    };
-    let mut display_2d = match DISPLAY_2D.lock() {
-        Ok(val) => val,
-        _ => return
-    };
-    let mut t = match TIME.lock() {
-        Ok(val) => val,
-        _ => return
-    };
-
-    display_2d.background(Color::new(120, 120, 120));
-
-    for x in 0..256 {
-        let input = ((x as f64) / 128.0, *t / 128.0);
-        let y = (noise_2d.next(input) * 256.0) as i32;
-
-        display_2d.pixel(x, y, canvas::BLACK)
-    }
-    display_2d.flush();
-
-    *t += 0.1;*/
+    //Alle Beispiele Zeichnen
+    reset_canvas()
 }
 
 #[wasm_bindgen]
 pub fn reset_canvas() {
-    draw_zufaellig();
-    draw_1d();
-    draw_2d_bild();
-    draw_2d_kreis();
+    draw_zufaellig(); //Zufällige Verteilung von Werten
+    draw_1d(); //Graf von 1-Dimensionaler Perlin Noise
+    draw_tangentenwerte(); //Tangentenwerte t1 und t2
+    draw_2d_bild(); //2-Dimensionaler Perlin Noise als Bild
+    draw_2d_kreis(); //2-Dimensionaler Perlin Noise kreisförmiges Objekt
 }
 
 fn draw_zufaellig() {
@@ -186,8 +159,8 @@ fn draw_2d_bild() {
 
     for x in 0..256 {
         for y in 0..256 {
-            let input = ((x as f64) / 256.0, (y as f64) / 256.0);
-            let c = (noise.next(input) * 256.0) as u8;
+            let input = ((x as f64) / 32.0, (y as f64) / 32.0);
+            let c = ((noise.next(input)) * 256.0) as u8;
 
             display_2d_b.pixel(x, y, Color::new(c, c, c));
         }
@@ -205,25 +178,60 @@ fn draw_2d_kreis() {
     let mut noise: NoiseGen<(i32, i32)> = NoiseGen::new_from_seed(seed);
     display_2d_k.background(Color::new(120, 120, 120));
 
-    for i in 0..720 {
+    for i in 0..1440 {
         let input = (
-            ((i as f64) / 2.0).to_radians().cos() + 1.0,
-            ((i as f64) / 2.0).to_radians().sin() + 1.0
+            ((i as f64) / 4.0).to_radians().cos() + 1.0,
+            ((i as f64) / 4.0).to_radians().sin() + 1.0
         );
-        let r = noise.next(input) * 100.0;
+        let r = (noise.next(input)) * 128.0;
 
-        let x = ((i as f64) / 2.0).to_radians().cos() * r + 128.0;
-        let y = ((i as f64) / 2.0).to_radians().sin() * r + 128.0;
+        let x = ((i as f64) / 4.0).to_radians().cos() * r + 100.0;
+        let y = ((i as f64) / 4.0).to_radians().sin() * r + 100.0;
 
         display_2d_k.pixel(x as i32, y as i32, canvas::BLACK);
     }
     display_2d_k.flush();
 }
 
+fn draw_tangentenwerte() {
+    let seed = get_seed();
+    let mut display_t_wert = match DISPLAY_T_WERT.lock() {
+        Ok(val) => val,
+        _ => return
+    };
+    console_log(&seed.to_string());
+    let mut rand = StdRng::seed_from_u64(seed);
+
+    let p1 = 1;
+    let g1 = rand.gen::<f32>() * 2.0 - 1.0; //Zufälliger gradient zwischen -1 und 1
+    let p2 = 2;
+    let g2 = rand.gen::<f32>() * 2.0 - 1.0;
+
+    display_t_wert.background(Color::new(120, 120, 120));
+
+    for x in 0..256 {
+        let x_wert = (x as f32) / 256.0 + (p1 as f32);
+
+        //Tangentenwert t1
+        let t1 = g1 * (x_wert - (p1 as f32));
+        let t1 = t1 * 128.0 + 128.0; //Skalierung y von -1 bis 1 und x von p1 bis p2
+        let t1 = 256.0 - t1; //In y Richtung spiegeln, weil Koordintensystem von links oben ausgeht
+        
+        //Tangentenwert t2
+        let t2 = g2 * (x_wert - (p2 as f32));
+        let t2 = t2 * 128.0 + 128.0;
+        let t2 = 256.0 - t2;
+
+        display_t_wert.pixel(x as i32, t1 as i32, canvas::BLACK); //t1 in schwarz
+        display_t_wert.pixel(x as i32, t2 as i32, Color::new(255, 0, 0)); //t2 in rot
+    }
+    display_t_wert.flush();
+}
+
 fn get_seed() -> u64 {
     match SEED.lock() {
         Ok(val) => *val,
-        _ => 120398471023
+        _ => ORIGINAL_SEED
     }
 }
 

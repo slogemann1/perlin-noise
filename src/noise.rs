@@ -4,8 +4,6 @@ use std::fmt::Debug;
 use rand::{ SeedableRng, Rng };
 use rand::rngs::StdRng;
 
-//TODO: change bounds to proper ones
-
 ///Struct, welches Perlin Noise Werte zurückgibt
 pub struct NoiseGen<T: GradVector>
 where T::U: Clone {
@@ -75,7 +73,7 @@ where T::U: Clone + Debug {
             g_list.push(self.get_vector(p));
         }
 
-        let mut dist_list: Vec<T::U> = Vec::new(); //Liste von den Distanzen von den Ecken zum Punkt
+        let mut dist_list: Vec<T::U> = Vec::new(); //Liste von den Distanzvectoren von den Ecken zum Punkt
         for p in &p_list {
             dist_list.push(T::dist(&punkt, p));
         }
@@ -83,10 +81,11 @@ where T::U: Clone + Debug {
         let w_list: Vec<f64> = T::get_w_list(&dist_list, &g_list); //Implementation in den Dimensionen selber (Siehe z.B. f32)
         let diff_list: Vec<f64> = T::get_dim_diff(&punkt); //Liste von den Unterschieden der jeweiligen Dimensionen
 
-        Self::interpolate(&diff_list, &w_list) + 0.5
+        T::normalize(Self::interpolate(&diff_list, &w_list))
     }
 
     fn interpolate(diff_list: &Vec<f64>, w_list: &Vec<f64>) -> f64 {
+        //Nach Perlin's "Improving Noise"
         let blend = |d: f64| 10.0*d*d*d - 15.0*d*d*d*d + 6.0*d*d*d*d*d; //Blending function: 10X^3 − 15X^4 + 6X^5
 
         T::interpolate(diff_list, w_list, blend)
@@ -122,6 +121,9 @@ pub trait GradVector: Sized + Clone + Eq + Hash + Debug {
 
     ///Gibt die unterschiedlichen Differenzwerte für den Punkt an (1 pro Dimension) 
     fn get_dim_diff(punkt: &Self::U) -> Vec<f64>;
+
+    ///Gibt den Perlin Noise Wert als Zahl zwischen 0 und 1 (ungefähr)
+    fn normalize(noise_wert: f64) -> f64;
 }
 
 impl GradVector for i32 {
@@ -159,6 +161,11 @@ impl GradVector for i32 {
     fn get_dim_diff(punkt: &Self::U) -> Vec<f64> {
         vec![punkt - ((*punkt as i32) as f64)]
     }
+
+    fn normalize(noise_wert: f64) -> f64 {
+        //ungefähr
+        noise_wert + 0.5
+    }
 }
 
 impl GradVector for (i32, i32) {
@@ -167,22 +174,20 @@ impl GradVector for (i32, i32) {
     fn default_gradient_list() -> Option<Vec<Self::U>> {
         Some(
             vec![
-                (0.0, 1.0), 
-                (1.0, 0.0),
-                (0.0, -1.0),
-                (-1.0, 0.0)
+                //Nach Perlin's "Improving Noise" (Rictungen von Quadrat zu den Eckpunkten)
+                (1.0, 1.0), 
+                (1.0, -1.0),
+                (-1.0, 1.0),
+                (-1.0, -1.0)
             ]
         )
     }
 
     fn new_normalized(random: &mut StdRng) -> Self::U {
-        let mut rand: (f64, f64) = random.gen::<Self::U>();
-        rand.0 *= 2.0;
-        rand.1 *= 2.0;
-        rand.0 -= 1.0; 
-        rand.1 -= 1.0;
+        let rand: (f64, f64) = random.gen::<Self::U>();
+        let mag = (rand.0 * rand.0 + rand.1 * rand.1).sqrt();
 
-        rand
+        (rand.0 / mag, rand.1 / mag)
     }
 
     fn get_nearest(p: &Self::U) -> Vec<Self> {
@@ -228,5 +233,9 @@ impl GradVector for (i32, i32) {
             punkt.0 - ((punkt.0 as i32) as f64),
             punkt.1 - ((punkt.1 as i32) as f64),
         ]
+    }
+
+    fn normalize(noise_wert: f64) -> f64 {
+        (noise_wert + 1.0) / 2.0
     }
 }

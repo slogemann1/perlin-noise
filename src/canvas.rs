@@ -101,11 +101,11 @@ impl Canvas {
         set_style(&self.name, &format!("position: absolute; left: {}px; top: {}px;", x, y));
     }
 
-    pub fn set_canvas_pos(&self, x: u32, y: u32) {
+    pub fn set_canvas_pos(&self, x: i32, y: i32) {
         set_style(&format!("{}_canvas", self.name), &format!("position: relative; left: {}px; top: {}px;", x, y));
     }
 
-    pub fn set_h2_pos(&self, x: u32, y: u32) {
+    pub fn set_h2_pos(&self, x: i32, y: i32) {
         set_style(&format!("{}_h2", self.name), &format!("position: relative; left: {}px; top: {}px;", x, y));
     }
 }
