@@ -199,7 +199,6 @@ fn draw_tangentenwerte() {
         Ok(val) => val,
         _ => return
     };
-    console_log(&seed.to_string());
     let mut rand = StdRng::seed_from_u64(seed);
 
     let p1 = 1;

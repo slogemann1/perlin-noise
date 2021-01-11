@@ -1,7 +1,5 @@
 import * as wasm from "perlin-noise";
 
-setInterval(wasm.animate_callback, 10);
-
 function changeSeed(input) {
     let newSeed = input.value.trim();
     wasm.set_seed(newSeed);
@@ -10,7 +8,7 @@ function changeSeed(input) {
 
 setupButton();
 function setupButton() {
-    let input = document.getElementsById("seed");
+    let input = document.getElementById("seed");
     input.addEventListener(
         "change",
         (e) => {

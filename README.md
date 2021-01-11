@@ -1,8 +1,8 @@
 # Eine Implementation von Perlin Noise geschrieben für die Mini-Facharbeit
 Diese Implementation wurde in Rust geschrieben und zu WebAssembly kompiliert um als
-interaktives Beispiel im Browser zu dienen. Diesen findet man unter: (LINK HIER HINZUFÜGEN)
+interaktives Beispiel im Browser zu dienen. Diesen findet man unter: https://slogemann1.github.io/Perlin-Noise/index.html
 
-## Binärdatei Erstellen
+## Dateien Erstellen
 Für das Kompilieren der Dateien werden "Cargo" und "Wasm-pack" benötigt.
 Für das spätere ausführen wird "Node" benutzt.
 
